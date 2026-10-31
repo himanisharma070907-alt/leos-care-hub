@@ -1,7 +1,7 @@
-
 import streamlit as st
 import pandas as pd
 import sqlite3
+import hmac
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
@@ -12,6 +12,46 @@ st.set_page_config(
     page_icon="🐶",
     layout="wide"
 )
+
+# ---------------- PASSWORD PROTECTION ----------------
+# Set APP_PASSWORD in Streamlit Community Cloud > App settings > Secrets.
+# Never write the real password directly in this file.
+
+try:
+    APP_PASSWORD = str(st.secrets["APP_PASSWORD"])
+except Exception:
+    st.error(
+        "App password is not configured. The app owner must add "
+        "APP_PASSWORD in Streamlit App settings > Secrets."
+    )
+    st.stop()
+
+if not st.session_state.get("authenticated", False):
+    st.title("🐾 Leo's Care Hub")
+    st.subheader("Private access")
+    st.write("Enter the password to open Leo's Care Hub.")
+
+    with st.form("login_form"):
+        entered_password = st.text_input(
+            "Password",
+            type="password",
+            placeholder="Enter your private password"
+        )
+        login_clicked = st.form_submit_button("Log in")
+
+    if login_clicked:
+        if hmac.compare_digest(entered_password, APP_PASSWORD):
+            st.session_state["authenticated"] = True
+            st.rerun()
+        else:
+            st.error("Incorrect password. Please try again.")
+
+    st.stop()
+
+# A logout button is shown only after successful login.
+if st.sidebar.button("Log out"):
+    st.session_state["authenticated"] = False
+    st.rerun()
 
 DB = "leo_care.db"
 
@@ -551,3 +591,4 @@ st.markdown(
     "<center>Made with ❤️ for Leo 🐾</center>",
     unsafe_allow_html=True
 )
+
